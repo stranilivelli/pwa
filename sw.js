@@ -1,46 +1,68 @@
-const staticCacheName = 'site-static-v6';
+const staticCacheName = 'site-static-v2';
+const dynamicCacheName = 'site-dynamic-v1';
 const assets = [
-    '/portfolio5',
-    'index.html',
-    'about.html',
-    'css/style.css',
-    'css/img/galaxy.jpg',
-    'img/andrea_n.jpg',
-    'img/adobe-photoshop-cs6-logo-svgrepo-com.svg',
-    'img/arte-e-tecnologia-paone.jpg',
-    'img/black_spiderman_n.jpg',
-    'img/devilman_n.jpg',
-    'img/hb.svg',
-    'img/profilo_n.jpg',
-    'js/ui.js',
-    'js/app.js',
-    'pdf/extra-large.pdf',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/webfonts/fa-brands-400.woff2',
-    'https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Montserrat:wght@400;700;900&display=swap',
+    '/pwa3/',
+    '/pwa3/index.html',
+    '/pwa3/js/app.js',
+    '/pwa3/css/style.css',
+    '/pwa3/img/hb.svg',
+    '/pwa3/img/me.png',
+    '/pwa3/img/paone_3d.jpg',
+    '/pwa3/img/profilo_n.jpg',
+    '/pwa3/js/ui.js',
+    '/pwa3/manifest.json',
+    '/pwa3/favicon.ico',
+    // Aggiungi anche le icone PWA
 ];
+
 // install event
 self.addEventListener('install', evt => {
-  //console.log('service worker installed');
-  evt.waitUntil(
-    caches.open(staticCacheName).then(cache => {
-      console.log('caching shell assets');
-      cache.addAll(assets);
-    })
-  );
+    console.log('Service worker installing...');
+    evt.waitUntil(
+        caches.open(staticCacheName)
+            .then(cache => {
+                console.log('Caching shell assets...');
+                return cache.addAll(assets);
+            })
+            .catch(err => {
+                console.error('Cache add all error:', err);
+                // Continua comunque l'installazione
+            })
+    );
 });
 
 // activate event
 self.addEventListener('activate', evt => {
-  //console.log('service worker activated');
+    console.log('Service worker activating...');
+    evt.waitUntil(
+        caches.keys().then(keys => {
+            return Promise.all(keys
+                .filter(key => key !== staticCacheName && key !== dynamicCacheName)
+                .map(key => caches.delete(key))
+            );
+        })
+    );
 });
 
 // fetch event
 self.addEventListener('fetch', evt => {
-  //console.log('fetch event', evt);
-  evt.respondWith(
-      caches.match(evt.request).then(cacheRes =>{
-          return cacheRes || fetch(evt.request);
-      })
-  )
+    evt.respondWith(
+        caches.match(evt.request)
+            .then(cacheRes => {
+                return cacheRes || fetch(evt.request).then(fetchRes => {
+                    // Cache dinamica per le risorse non in cache statica
+                    return caches.open(dynamicCacheName).then(cache => {
+                        if (evt.request.url.indexOf('http') === 0) { // Solo URL HTTP
+                            cache.put(evt.request.url, fetchRes.clone());
+                        }
+                        return fetchRes;
+                    });
+                });
+            }).catch(() => {
+                // Qui puoi restituire una pagina di fallback se richiedi HTML
+                if (evt.request.url.indexOf('.html') > -1) {
+                    return caches.match('/pwa3/offline.html'); // Crea una pagina offline.html
+                }
+            })
+    );
 });
