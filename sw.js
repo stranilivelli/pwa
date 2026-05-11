@@ -1,18 +1,16 @@
-const staticCacheName = 'site-static-v2';
+const staticCacheName = 'site-static-v1';
 
 const assets = [
     './',
     'index.html',
-    'offline.html',
-    'js/app.js',
-    'js/ui.js',
-    'css/style.css',
-    'img/hb.svg',
-    'img/me.png',
-    'img/paone_3d.jpg',
+    'style.css',
     'img/profilo_n.jpg',
+    'img/hamburger-2-svgrepo-com.svg',
+    'img/css3-02-svgrepo-com.svg',
+    'img/html5-01-svgrepo-com.svg',
+    'img/python-svgrepo-com.svg',
+    'img/js01-svgrepo-com.svg',
     'manifest.json',
-    'favicon.ico',
 ];
 
 // install event
