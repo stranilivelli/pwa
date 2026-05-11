@@ -1,5 +1,4 @@
-const VERSION = 'v2';
-const staticCacheName = `site-static-${VERSION}`;
+const staticCacheName = 'site-static-v2';
 
 const assets = [
     './',
