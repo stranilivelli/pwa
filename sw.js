@@ -1,67 +1,72 @@
-const staticCacheName = 'site-static-v2';
-const dynamicCacheName = 'site-dynamic-v1';
+const VERSION = 'v2';
+const staticCacheName = `site-static-${VERSION}`;
+
 const assets = [
-    '/pwa3/',
-    '/pwa3/index.html',
-    '/pwa3/js/app.js',
-    '/pwa3/css/style.css',
-    '/pwa3/img/hb.svg',
-    '/pwa3/img/me.png',
-    '/pwa3/img/paone_3d.jpg',
-    '/pwa3/img/profilo_n.jpg',
-    '/pwa3/js/ui.js',
-    '/pwa3/manifest.json',
-    '/pwa3/favicon.ico',
-    // Aggiungi anche le icone PWA
+    './',
+    'index.html',
+    'offline.html',
+    'js/app.js',
+    'js/ui.js',
+    'css/style.css',
+    'img/hb.svg',
+    'img/me.png',
+    'img/paone_3d.jpg',
+    'img/profilo_n.jpg',
+    'manifest.json',
+    'favicon.ico',
 ];
 
 // install event
 self.addEventListener('install', evt => {
-    console.log('Service worker installing...');
+    console.log('[SW] Installing...');
+    self.skipWaiting();
     evt.waitUntil(
         caches.open(staticCacheName)
             .then(cache => {
-                console.log('Caching shell assets...');
+                console.log('[SW] Caching static assets...');
                 return cache.addAll(assets);
-            })
-            .catch(err => {
-                console.error('Cache add all error:', err);
-                // Continua comunque l'installazione
             })
     );
 });
 
 // activate event
 self.addEventListener('activate', evt => {
-    console.log('Service worker activating...');
+    console.log('[SW] Activating...');
     evt.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(keys
-                .filter(key => key !== staticCacheName && key !== dynamicCacheName)
-                .map(key => caches.delete(key))
-            );
+        clients.claim().then(() => {
+            return caches.keys().then(keys => {
+                return Promise.all(
+                    keys
+                        .filter(key => key !== staticCacheName)
+                        .map(key => {
+                            console.log('[SW] Deleting old cache:', key);
+                            return caches.delete(key);
+                        })
+                );
+            });
         })
     );
 });
 
 // fetch event
 self.addEventListener('fetch', evt => {
+    // Ignora richieste non-GET
+    if (evt.request.method !== 'GET') return;
+
     evt.respondWith(
         caches.match(evt.request)
             .then(cacheRes => {
-                return cacheRes || fetch(evt.request).then(fetchRes => {
-                    // Cache dinamica per le risorse non in cache statica
-                    return caches.open(dynamicCacheName).then(cache => {
-                        if (evt.request.url.indexOf('http') === 0) { // Solo URL HTTP
-                            cache.put(evt.request.url, fetchRes.clone());
-                        }
-                        return fetchRes;
-                    });
-                });
-            }).catch(() => {
-                // Qui puoi restituire una pagina di fallback se richiedi HTML
-                if (evt.request.url.indexOf('.html') > -1) {
-                    return caches.match('/pwa3/offline.html'); // Crea una pagina offline.html
+                if (cacheRes) {
+                    console.log('[SW] Serving from cache:', evt.request.url);
+                    return cacheRes;
+                }
+                console.log('[SW] Fetching from network:', evt.request.url);
+                return fetch(evt.request);
+            })
+            .catch(() => {
+                console.warn('[SW] Fetch failed, serving offline fallback');
+                if (evt.request.headers.get('accept').includes('text/html')) {
+                    return caches.match('offline.html');
                 }
             })
     );
